@@ -11,13 +11,13 @@ int SENSOR[numSen] = {SENSOR0, SENSOR1, SENSOR2, SENSOR3};
 
 //-----------LED------------//
 #define numLED 3
-#define LED1 40 // LED1 --> PIXEL1
-#define LED2 41 // LED2 --> PIXEL2
-#define LED0 42 // LED0 --> PIXEL3
+#define LED1 11 // 41 // LED1 --> PIXEL2
+#define LED2 10 // 40  // LED2 --> PIXEL1
+#define LED0 9  // 42 // LED0 --> PIXEL3
 int LED[numLED] = {LED0, LED1, LED2};
 
 //-----------LED, BUZZER ON BOARD------------//
-#define BUZZER 1
+#define BUZZER 1 // 1
 #define LED_BLINK 2
 
 bool led_status = 0;
@@ -93,10 +93,10 @@ uint8_t ui8_state_thung_nhantuPC[3] = {NO_STATE, NO_STATE, NO_STATE};
 uint8_t ui8_state_voi_nhantuPC[3] = {NO_STATE, NO_STATE, NO_STATE};
 // uint8_t ui8_state_voi_change[2] = {0, 0};
 /// Trạng thái 2 vòi bán nhớt nhận từ PC
-///  0 -> Vòi 1 | 1 -> Vòi 2
+///  0 -> Vòi thải | 1 -> Vòi 1 | 2 -> Vòi 2
 
 //-----------Khai báo cho LED PIXEl------------//
-#define NUMPIXELS 160 // Số bóng LED trên một Strip
+#define NUMPIXELS 70  // Số bóng LED trên một Strip
 #define BRIGHTNESS 50 // Độ sáng (từ 0 đến 255)
 
 Adafruit_NeoPixel strip[3] = {
@@ -112,6 +112,7 @@ uint32_t timedelay_hieuung = 1000; // Nháy sau 1 s
 
 bool ui2_state_hieuung[3] = {0, 0, 0}; // Mảng lưu trạng thái nháy
 
+int flag = 0;
 void setup()
 {
   Serial.begin(115200);
@@ -213,6 +214,7 @@ void sendState(uint8_t sensor, uint8_t state)
   free(data_send);
   ui32_timecho_guilenh = millis();
 }
+
 /**********************Gửi phản hồi lên PC**************************/
 void sendRespond(uint8_t function_code, uint8_t status)
 {
@@ -253,6 +255,7 @@ void processSensor()
     }
   }
 }
+
 /**********************Đọc tín hiệu Serial************************/
 void readSerial()
 {
@@ -349,6 +352,7 @@ void processSerial()
     ui16_last_order_command = ui16_order_command;
     if (ui16_du_lieu_data_nhan == 0x0000)
     {
+      ui8_state_voi_nhantuPC[0] = DANGBAN;
       // START_USER();
       // ui8_kethuc=0;
       // ui8_hacuadi = 0;
@@ -362,6 +366,7 @@ void processSerial()
     // END USER
     else if (ui16_du_lieu_data_nhan == 0x00FF)
     {
+      ui8_state_voi_nhantuPC[0] = NGUNGBAN;
       // STOP_USER();
       // // ui8_hetchoigame = 1;
       // ui8_kethuc=1;
@@ -432,7 +437,10 @@ void processSerial()
   /*****************RESET******************/
   case 0x10:
     ui16_last_order_command = ui16_order_command;
-    RESET();
+    if (ui16_du_lieu_data_nhan == 0x0000)
+    {
+      RESET();
+    }
     break;
 
   default:
@@ -524,6 +532,7 @@ void setLEDPixel()
         else
           setOneColorAllStrip(i, 255, 0, 0); // Nếu là thùng nhớt bán cạn thì báo đỏ
       }
+      strip[i].show();
     }
     else if (ui8_state_LEDPIXEL[i] == DANGHOATDONG)
     {
@@ -537,14 +546,15 @@ void setLEDPixel()
           setOneColorAllStrip(i, 0, 255, 0);
         else if (ui2_state_hieuung[i] == 1)
           setOneColorAllStrip(i, 0, 0, 0);
+        strip[i].show();
       }
     }
-    strip[i].show();
   }
 }
-/**********************RESET trạng thải thùng************************/
+/**********************RESET trạng thái thùng************************/
 void RESET()
 {
+
   for (int i = 0; i < 3; ++i)
   {
     ui8_state_thung_nhantuPC[i] = NO_STATE;
@@ -552,6 +562,9 @@ void RESET()
     ui8_state_LEDPIXEL[i] = NO_STATE;
     ui8_state_thung[i] = BINHTHUONG;
   }
+  // ui16_order_command = 0x0001;
+  // ui16_last_order_command = 0xFFFF;
+  ui16_self_order_command = 0x0001;
 }
 
 void testLED()
@@ -596,18 +609,17 @@ void tatcoibao()
 }
 
 /**********************Loop************************/
-int flag = 0;
+
 void loop()
 {
 
   if (flag == 0)
   {
-
+    //
     // Bật còi chỉ một lần
     //  flag = 1;
     //  batcoibao(1000);
   }
-
   /**********************Main Funtion**************************/
   readSensor();
   processSensor();
