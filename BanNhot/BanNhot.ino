@@ -43,8 +43,8 @@ uint32_t ui32_timedoccambien = 0;
 uint32_t ui32_timechar = 0;
 uint32_t timeout_buz = 0;
 
-uint16_t ui16_order_command;
-uint16_t ui16_last_order_command = 0xFFFF;
+uint16_t ui16_order_command = 0xffff;
+uint16_t ui16_last_order_command = 0x0000;
 uint16_t ui16_self_order_command = 0x0001;
 
 uint8_t function_code = 0x07;
@@ -223,8 +223,8 @@ void sendRespond(uint8_t function_code, uint8_t status)
   uint8_t *data_send = (uint8_t *)malloc(sizeofdata * sizeof(uint8_t));
   *(data_send) = ui8_slaveID;
   *(data_send + 1) = function_code;
-  *(data_send + 2) = ui16_self_order_command >> 8;
-  *(data_send + 3) = ui16_self_order_command & (0x00FF);
+  *(data_send + 2) = ui16_order_command >> 8;
+  *(data_send + 3) = ui16_order_command & (0x00FF);
   *(data_send + 4) = 0x02;
   *(data_send + 5) = status;
   uint16_t ui16_crc_pro = calcCRC16(6, data_send);
@@ -235,10 +235,10 @@ void sendRespond(uint8_t function_code, uint8_t status)
   {
     Serial.write(*(data_send + i));
   }
-  if (ui16_self_order_command < 0xFFFF)
-    ++ui16_self_order_command;
-  else
-    ui16_self_order_command = 0x0001;
+  // if (ui16_self_order_command < 0xFFFF)
+  //   ++ui16_self_order_command;
+  // else
+  //   ui16_self_order_command = 0x0001;
   free(data_send);
   ui32_timecho_guilenh = millis();
 }
@@ -338,9 +338,10 @@ void processSerial()
   ui16_du_lieu_data_nhan = (ui16_du_lieu_data_nhan << 8);
   ui16_du_lieu_data_nhan = ui16_du_lieu_data_nhan | uc8_data[6];
 
-  if (ui16_order_command == ui16_last_order_command)
+  if (ui16_order_command == 0x0000 || ui16_order_command == ui16_last_order_command + 1)
   {
-    ui8_phanhoi_trunglenh = 1;
+    sendRespond(uc8_data[1], 0x00);
+    ui16_last_order_command = ui16_order_command;
     return;
   }
 
@@ -562,8 +563,8 @@ void RESET()
     ui8_state_LEDPIXEL[i] = NO_STATE;
     ui8_state_thung[i] = BINHTHUONG;
   }
-  // ui16_order_command = 0x0001;
-  // ui16_last_order_command = 0xFFFF;
+  ui16_order_command = 0xffff;
+  ui16_last_order_command = 0x0000;
   ui16_self_order_command = 0x0001;
 }
 
